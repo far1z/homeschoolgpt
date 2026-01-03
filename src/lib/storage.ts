@@ -6,11 +6,13 @@
 import type {
   AppState,
   Child,
+  ChildProfile,
   Toy,
   DayCurriculum,
   LessonHistory,
   ActivityFeedback,
   Activity,
+  SkillArea,
 } from "@/types";
 
 const STORAGE_KEY = "homeschool-gpt-state";
@@ -18,6 +20,7 @@ const STORAGE_KEY = "homeschool-gpt-state";
 // Default state
 const defaultState: AppState = {
   child: null,
+  childProfile: null,
   toys: [],
   currentCurriculum: null,
   lessonHistory: [],
@@ -52,6 +55,34 @@ export function saveChild(child: Child): void {
   const state = getAppState();
   state.child = child;
   saveAppState(state);
+}
+
+// Child profile operations
+export function getChildProfile(): ChildProfile | null {
+  return getAppState().childProfile;
+}
+
+export function saveChildProfile(profile: ChildProfile): void {
+  const state = getAppState();
+  state.childProfile = profile;
+  saveAppState(state);
+}
+
+export function initializeChildProfile(childId: string): ChildProfile {
+  const profile: ChildProfile = {
+    childId,
+    lastUpdated: new Date().toISOString(),
+    skillLevels: {},
+    strengths: [],
+    areasForGrowth: [],
+    observations: [],
+    preferredActivityTypes: [],
+    avoidances: [],
+    developmentNotes: "",
+    activitiesCompleted: 0,
+  };
+  saveChildProfile(profile);
+  return profile;
 }
 
 // Toys operations
@@ -143,12 +174,16 @@ export function getLessonHistory(limit?: number): LessonHistory[] {
 
 export function addLessonHistory(
   activityId: string,
+  activityTitle: string,
+  skillAreas: SkillArea[],
   feedback: ActivityFeedback
 ): void {
   const state = getAppState();
   const historyEntry: LessonHistory = {
     id: crypto.randomUUID(),
     activityId,
+    activityTitle,
+    skillAreas,
     date: new Date().toISOString(),
     feedback,
   };

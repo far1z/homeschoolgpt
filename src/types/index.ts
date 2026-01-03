@@ -99,13 +99,52 @@ export interface DayCurriculum {
 export interface LessonHistory {
   id: string;
   activityId: string;
+  activityTitle: string;
+  skillAreas: SkillArea[];
   date: string;
   feedback: ActivityFeedback;
+}
+
+// Child profile - built up over time from activity feedback
+export interface ChildProfile {
+  childId: string;
+  lastUpdated: string;
+
+  // Skill levels (1-5 scale based on activity performance)
+  skillLevels: {
+    [key in SkillArea]?: {
+      level: number; // 1-5
+      trend: "improving" | "stable" | "needs-attention";
+      lastAssessed: string;
+    };
+  };
+
+  // What the child enjoys and excels at
+  strengths: string[];
+
+  // Areas that need more practice or different approaches
+  areasForGrowth: string[];
+
+  // Specific observations from caregivers
+  observations: string[];
+
+  // Preferred activity types based on engagement
+  preferredActivityTypes: string[];
+
+  // Activities/approaches that didn't work well
+  avoidances: string[];
+
+  // Overall developmental notes
+  developmentNotes: string;
+
+  // Number of activities completed
+  activitiesCompleted: number;
 }
 
 // App state stored in localStorage
 export interface AppState {
   child: Child | null;
+  childProfile: ChildProfile | null;
   toys: Toy[];
   currentCurriculum: DayCurriculum | null;
   lessonHistory: LessonHistory[];
@@ -115,6 +154,7 @@ export interface AppState {
 // API request/response types
 export interface GenerateCurriculumRequest {
   child: Child;
+  childProfile: ChildProfile | null;
   toys: Toy[];
   recentHistory: LessonHistory[];
   date: string;
@@ -122,4 +162,20 @@ export interface GenerateCurriculumRequest {
 
 export interface GenerateCurriculumResponse {
   activities: Activity[];
+}
+
+// Profile update request
+export interface UpdateProfileRequest {
+  childId: string;
+  currentProfile: ChildProfile | null;
+  activity: {
+    title: string;
+    skillAreas: SkillArea[];
+  };
+  feedback: ActivityFeedback;
+  recentHistory: LessonHistory[];
+}
+
+export interface UpdateProfileResponse {
+  profile: ChildProfile;
 }

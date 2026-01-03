@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 
 import type {
   Child,
+  ChildProfile,
   Toy,
   DayCurriculum,
   Activity,
@@ -13,15 +14,18 @@ import type {
 import {
   getAppState,
   getChild,
+  getChildProfile,
   getToys,
   getCurrentCurriculum,
   saveCurriculum,
+  saveChildProfile,
+  initializeChildProfile,
   updateActivityStatus,
   advanceToNextActivity,
   addLessonHistory,
   getLessonHistory,
 } from "@/lib/storage";
-import { generateCurriculum, regenerateActivity } from "@/lib/api";
+import { generateCurriculum, regenerateActivity, updateChildProfile } from "@/lib/api";
 
 import Onboarding from "@/components/Onboarding";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -43,10 +47,12 @@ type AppView =
 export default function Home() {
   const [view, setView] = useState<AppView>("loading");
   const [child, setChild] = useState<Child | null>(null);
+  const [childProfile, setChildProfileState] = useState<ChildProfile | null>(null);
   const [toys, setToys] = useState<Toy[]>([]);
   const [curriculum, setCurriculum] = useState<DayCurriculum | null>(null);
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize app state from localStorage
@@ -59,6 +65,7 @@ export default function Home() {
     }
 
     setChild(state.child);
+    setChildProfileState(state.childProfile);
     setToys(state.toys);
 
     const existingCurriculum = getCurrentCurriculum();
@@ -79,16 +86,21 @@ export default function Home() {
     } else {
       // Need to generate new curriculum
       setView("generating");
-      generateNewCurriculum(state.child, state.toys);
+      generateNewCurriculum(state.child, state.childProfile, state.toys);
     }
   }, []);
 
-  const generateNewCurriculum = async (childData: Child, toysData: Toy[]) => {
+  const generateNewCurriculum = async (
+    childData: Child,
+    profile: ChildProfile | null,
+    toysData: Toy[]
+  ) => {
     try {
       setError(null);
       const recentHistory = getLessonHistory(10);
       const newCurriculum = await generateCurriculum(
         childData,
+        profile,
         toysData,
         recentHistory
       );
@@ -112,10 +124,14 @@ export default function Home() {
     const toysData = getToys();
 
     if (childData && toysData.length > 0) {
+      // Initialize the child profile
+      const profile = initializeChildProfile(childData.id);
+
       setChild(childData);
+      setChildProfileState(profile);
       setToys(toysData);
       setView("generating");
-      generateNewCurriculum(childData, toysData);
+      generateNewCurriculum(childData, profile, toysData);
     }
   };
 
@@ -178,11 +194,40 @@ export default function Home() {
     }
   };
 
-  const handleFeedbackSubmit = (feedback: ActivityFeedback) => {
-    if (!currentActivity) return;
+  const handleFeedbackSubmit = async (feedback: ActivityFeedback) => {
+    if (!currentActivity || !child) return;
 
-    // Save feedback to history
-    addLessonHistory(currentActivity.id, feedback);
+    // Save feedback to history with activity details
+    addLessonHistory(
+      currentActivity.id,
+      currentActivity.title,
+      currentActivity.skillAreas,
+      feedback
+    );
+
+    // Update child profile in background (don't block UI)
+    setIsUpdatingProfile(true);
+    updateChildProfile(
+      child.id,
+      childProfile,
+      {
+        title: currentActivity.title,
+        skillAreas: currentActivity.skillAreas,
+      },
+      feedback,
+      getLessonHistory(10)
+    )
+      .then((updatedProfile) => {
+        setChildProfileState(updatedProfile);
+        saveChildProfile(updatedProfile);
+      })
+      .catch((err) => {
+        console.error("Failed to update child profile:", err);
+        // Non-critical, don't show error to user
+      })
+      .finally(() => {
+        setIsUpdatingProfile(false);
+      });
 
     // Move to next activity
     const nextActivity = advanceToNextActivity();
@@ -203,7 +248,10 @@ export default function Home() {
   const handleStartNewDay = useCallback(() => {
     if (child && toys.length > 0) {
       setView("generating");
-      generateNewCurriculum(child, toys);
+      // Get fresh profile from state
+      const profile = getChildProfile();
+      setChildProfileState(profile);
+      generateNewCurriculum(child, profile, toys);
     }
   }, [child, toys]);
 
