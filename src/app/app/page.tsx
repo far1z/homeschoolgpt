@@ -36,6 +36,7 @@ import Header from "@/components/Header";
 import ActivityCard from "@/components/ActivityCard";
 import FeedbackForm from "@/components/FeedbackForm";
 import SessionSummary from "@/components/SessionSummary";
+import ChildProfileView from "@/components/ChildProfileView";
 
 type AppView =
   | "loading"
@@ -44,10 +45,12 @@ type AppView =
   | "generating"
   | "activity"
   | "feedback"
-  | "summary";
+  | "summary"
+  | "settings";
 
 export default function Home() {
   const [view, setView] = useState<AppView>("loading");
+  const [previousView, setPreviousView] = useState<AppView | null>(null);
   const [child, setChild] = useState<Child | null>(null);
   const [childProfile, setChildProfileState] = useState<ChildProfile | null>(null);
   const [toyHistory, setToyHistory] = useState<Toy[]>([]);
@@ -268,6 +271,22 @@ export default function Home() {
     setView("toy-selection");
   }, []);
 
+  const handleSettingsClick = useCallback(() => {
+    setPreviousView(view);
+    // Refresh profile data before viewing
+    setChildProfileState(getChildProfile());
+    setView("settings");
+  }, [view]);
+
+  const handleSettingsBack = useCallback(() => {
+    if (previousView) {
+      setView(previousView);
+      setPreviousView(null);
+    } else {
+      setView("toy-selection");
+    }
+  }, [previousView]);
+
   // Render based on current view
   if (view === "loading") {
     return <LoadingScreen message="Loading..." />;
@@ -284,6 +303,7 @@ export default function Home() {
         toyHistory={toyHistory}
         onStartSession={handleStartSession}
         onAddToHistory={handleAddToHistory}
+        onSettingsClick={handleSettingsClick}
       />
     );
   }
@@ -297,10 +317,20 @@ export default function Home() {
     );
   }
 
+  if (view === "settings" && child) {
+    return (
+      <ChildProfileView
+        child={child}
+        profile={childProfile}
+        onBack={handleSettingsBack}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen min-h-dvh flex flex-col">
       {child && view !== "summary" && (
-        <Header childName={child.name} />
+        <Header childName={child.name} onSettingsClick={handleSettingsClick} />
       )}
 
       <div className="flex-1 px-6 pb-8">

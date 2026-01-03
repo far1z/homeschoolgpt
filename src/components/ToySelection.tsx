@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Sparkles, Camera, Check } from "lucide-react";
+import { Plus, X, Sparkles, Camera, Check, Settings } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import type { Toy, ToyCategory } from "@/types";
 import { TOY_CATEGORIES } from "@/types";
@@ -13,6 +13,7 @@ interface ToySelectionProps {
   toyHistory: Toy[];
   onStartSession: (selectedToys: Toy[]) => void;
   onAddToHistory: (toy: Toy) => void;
+  onSettingsClick?: () => void;
 }
 
 export default function ToySelection({
@@ -20,6 +21,7 @@ export default function ToySelection({
   toyHistory,
   onStartSession,
   onAddToHistory,
+  onSettingsClick,
 }: ToySelectionProps) {
   const [selectedToyIds, setSelectedToyIds] = useState<Set<string>>(new Set());
   const [showAddToy, setShowAddToy] = useState(false);
@@ -77,12 +79,24 @@ export default function ToySelection({
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        <h1 className="font-display text-3xl font-semibold text-navy-800 mb-2">
-          Today&apos;s Toys
-        </h1>
-        <p className="text-navy-500">
-          What does {childName} have to play with today?
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-semibold text-navy-800 mb-2">
+              Today&apos;s Toys
+            </h1>
+            <p className="text-navy-500">
+              What does {childName} have to play with today?
+            </p>
+          </div>
+          {onSettingsClick && (
+            <button
+              onClick={onSettingsClick}
+              className="w-10 h-10 rounded-full bg-cream-200 hover:bg-cream-300 flex items-center justify-center transition-colors flex-shrink-0"
+            >
+              <Settings className="w-5 h-5 text-navy-600" />
+            </button>
+          )}
+        </div>
       </motion.div>
 
       {/* Toy grid */}
