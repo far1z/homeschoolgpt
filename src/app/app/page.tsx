@@ -37,6 +37,7 @@ import ActivityCard from "@/components/ActivityCard";
 import FeedbackForm from "@/components/FeedbackForm";
 import SessionSummary from "@/components/SessionSummary";
 import ChildProfileView from "@/components/ChildProfileView";
+import SessionRecoveryPrompt from "@/components/SessionRecoveryPrompt";
 
 type AppView =
   | "loading"
@@ -46,7 +47,8 @@ type AppView =
   | "activity"
   | "feedback"
   | "summary"
-  | "settings";
+  | "settings"
+  | "recovery";
 
 export default function Home() {
   const [view, setView] = useState<AppView>("loading");
@@ -76,12 +78,10 @@ export default function Home() {
     const existingSession = getCurrentSession();
 
     if (existingSession && existingSession.status === "in-progress") {
-      // Resume existing session
+      // Show recovery prompt for in-progress session
       setSession(existingSession);
       setSessionToys(getToysByIds(existingSession.selectedToyIds));
-      const activity = existingSession.activities[existingSession.currentActivityIndex];
-      setCurrentActivity(activity);
-      setView("activity");
+      setView("recovery");
     } else if (existingSession && existingSession.status === "completed") {
       // Show summary of completed session
       setSession(existingSession);
@@ -287,6 +287,24 @@ export default function Home() {
     }
   }, [previousView]);
 
+  const handleContinueSession = useCallback(() => {
+    if (session) {
+      const activity = session.activities[session.currentActivityIndex];
+      setCurrentActivity(activity);
+      setView("activity");
+    }
+  }, [session]);
+
+  const handleStartOverSession = useCallback(() => {
+    clearSession();
+    setSession(null);
+    setCurrentActivity(null);
+    setSessionToys([]);
+    setToyHistory(getToyHistory());
+    setChildProfileState(getChildProfile());
+    setView("toy-selection");
+  }, []);
+
   // Render based on current view
   if (view === "loading") {
     return <LoadingScreen message="Loading..." />;
@@ -294,6 +312,17 @@ export default function Home() {
 
   if (view === "onboarding") {
     return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  if (view === "recovery" && child && session) {
+    return (
+      <SessionRecoveryPrompt
+        session={session}
+        childName={child.name}
+        onContinue={handleContinueSession}
+        onStartOver={handleStartOverSession}
+      />
+    );
   }
 
   if (view === "toy-selection" && child) {
