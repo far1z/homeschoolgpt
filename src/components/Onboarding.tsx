@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Plus, X, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowLeft, Plus, X, Sparkles, Camera } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import type { Child, Toy, ToyCategory } from "@/types";
 import { TOY_CATEGORIES } from "@/types";
 import { saveChild, saveToys, completeOnboarding } from "@/lib/storage";
+import CameraCapture from "./CameraCapture";
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -23,6 +24,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [newToyName, setNewToyName] = useState("");
   const [newToyCategory, setNewToyCategory] = useState<ToyCategory>("other");
   const [showAddToy, setShowAddToy] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+
+  const handleToyFromCamera = (toy: Toy) => {
+    setToys([...toys, toy]);
+    setShowCamera(false);
+  };
 
   const handleAddToy = () => {
     if (!newToyName.trim()) return;
@@ -316,17 +323,30 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                     </div>
                   </motion.div>
                 ) : (
-                  <motion.button
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    onClick={() => setShowAddToy(true)}
-                    className="w-full card border-2 border-dashed border-cream-300 hover:border-terracotta-300 hover:bg-terracotta-50/50 flex items-center justify-center gap-2 py-4 transition-colors"
+                    className="flex gap-3"
                   >
-                    <Plus className="w-5 h-5 text-terracotta-500" />
-                    <span className="font-medium text-navy-600">
-                      Add a toy or material
-                    </span>
-                  </motion.button>
+                    <button
+                      onClick={() => setShowCamera(true)}
+                      className="flex-1 card border-2 border-dashed border-sage-300 hover:border-sage-400 hover:bg-sage-50/50 flex items-center justify-center gap-2 py-4 transition-colors"
+                    >
+                      <Camera className="w-5 h-5 text-sage-600" />
+                      <span className="font-medium text-navy-600">
+                        Take Photo
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setShowAddToy(true)}
+                      className="flex-1 card border-2 border-dashed border-cream-300 hover:border-terracotta-300 hover:bg-terracotta-50/50 flex items-center justify-center gap-2 py-4 transition-colors"
+                    >
+                      <Plus className="w-5 h-5 text-terracotta-500" />
+                      <span className="font-medium text-navy-600">
+                        Type Name
+                      </span>
+                    </button>
+                  </motion.div>
                 )}
               </AnimatePresence>
 
@@ -398,6 +418,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               </p>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Camera capture modal */}
+      <AnimatePresence>
+        {showCamera && (
+          <CameraCapture
+            onToyDetected={handleToyFromCamera}
+            onClose={() => setShowCamera(false)}
+          />
         )}
       </AnimatePresence>
     </div>
