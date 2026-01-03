@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Nunito', sans-serif;
+
+  /* Warm educational palette */
+  --color-cream: #FAF7F2;
+  --color-cream-dark: #EDE4D6;
+  --color-terracotta: #D97050;
+  --color-terracotta-light: #E38E74;
+  --color-sage: #5A9E7D;
+  --color-sage-light: #7BB89A;
+  --color-navy: #3A3E4A;
+  --color-navy-light: #5F677B;
+  --color-honey: #E9AC42;
+  --color-honey-light: #F0C46C;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: linear-gradient(
+    180deg,
+    var(--color-cream) 0%,
+    #F5EFE6 50%,
+    var(--color-cream) 100%
+  );
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--color-navy);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-dark);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-terracotta-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-terracotta);
+}
+
+/* Focus states for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Disable text selection on interactive elements for mobile */
+button, .no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure inputs are large enough for touch */
+input, textarea, select, button {
+  font-size: 16px; /* Prevents iOS zoom on focus */
+}
+
+/* Safe area insets for notched devices */
+.safe-area-inset {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Animation utilities */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Card hover effect */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(58, 62, 74, 0.1);
+}
+
+.card-hover:active {
+  transform: translateY(0);
+}
+
+/* Subtle texture overlay */
+.texture-overlay {
+  position: relative;
+}
+
+.texture-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.015;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Decorative shapes */
+.blob-shape {
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+}
+
+/* Progress ring for activities */
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Skill area colors */
+.skill-motor-fine { background-color: #FAE8E3; color: #A3482E; }
+.skill-motor-gross { background-color: #E7F2EC; color: #386651; }
+.skill-language { background-color: #FCF5E1; color: #8F5C24; }
+.skill-cognitive { background-color: #E3E5EA; color: #424757; }
+.skill-social-emotional { background-color: #FDF5F3; color: #873E2A; }
+.skill-sensory { background-color: #CEE5D9; color: #305242; }
+.skill-creativity { background-color: #F9E9C2; color: #754C21; }
+
+/* Engagement level colors */
+.engagement-1 { background-color: #FAE8E3; }
+.engagement-2 { background-color: #FCF5E1; }
+.engagement-3 { background-color: #F5EFE6; }
+.engagement-4 { background-color: #CEE5D9; }
+.engagement-5 { background-color: #A8D1BB; }
+
+/* Warm button styles */
+@layer components {
+  .btn-primary {
+    @apply bg-terracotta-600 text-white px-6 py-3 rounded-2xl font-semibold
+           transition-all duration-200 hover:bg-terracotta-700
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
+           shadow-md hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-cream-200 text-navy-700 px-6 py-3 rounded-2xl font-semibold
+           transition-all duration-200 hover:bg-cream-300
+           active:scale-[0.98] border border-cream-300;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-navy-600 px-4 py-2 rounded-xl font-medium
+           transition-all duration-200 hover:bg-cream-200
+           active:scale-[0.98];
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl bg-white border-2 border-cream-300
+           focus:border-terracotta-400 focus:ring-0 focus:outline-none
+           transition-colors duration-200 text-navy-800 placeholder:text-navy-400;
+  }
+
+  .card {
+    @apply bg-white rounded-3xl p-6 shadow-sm border border-cream-200;
+  }
+}
