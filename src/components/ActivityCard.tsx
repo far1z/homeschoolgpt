@@ -1,9 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Package, CheckCircle2, SkipForward, RefreshCw } from "lucide-react";
 import type { Activity } from "@/types";
 import { SKILL_AREAS } from "@/types";
+import DifferentActivityModal from "./DifferentActivityModal";
 
 interface ActivityCardProps {
   activity: Activity;
@@ -11,7 +13,7 @@ interface ActivityCardProps {
   totalActivities: number;
   onComplete: () => void;
   onSkip: () => void;
-  onRegenerate: () => void;
+  onRegenerate: (reason: string, notes: string) => void;
   isRegenerating?: boolean;
 }
 
@@ -24,6 +26,12 @@ export default function ActivityCard({
   onRegenerate,
   isRegenerating,
 }: ActivityCardProps) {
+  const [showDifferentModal, setShowDifferentModal] = useState(false);
+
+  const handleDifferentActivitySubmit = (reason: string, notes: string) => {
+    setShowDifferentModal(false);
+    onRegenerate(reason, notes);
+  };
   const skillLabels = activity.skillAreas.map((skill) => {
     const found = SKILL_AREAS.find((s) => s.value === skill);
     return found || { value: skill, label: skill, color: "navy" };
@@ -131,12 +139,12 @@ export default function ActivityCard({
 
         <div className="flex gap-3">
           <button
-            onClick={onRegenerate}
+            onClick={() => setShowDifferentModal(true)}
             disabled={isRegenerating}
             className="btn-secondary flex-1 flex items-center justify-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${isRegenerating ? "animate-spin" : ""}`} />
-            {isRegenerating ? "Regenerating..." : "Different Activity"}
+            {isRegenerating ? "Finding new..." : "Different Activity"}
           </button>
           <button
             onClick={onSkip}
@@ -147,6 +155,18 @@ export default function ActivityCard({
           </button>
         </div>
       </div>
+
+      {/* Different Activity Modal */}
+      <AnimatePresence>
+        {showDifferentModal && (
+          <DifferentActivityModal
+            activity={activity}
+            onSubmit={handleDifferentActivitySubmit}
+            onClose={() => setShowDifferentModal(false)}
+            isLoading={isRegenerating}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

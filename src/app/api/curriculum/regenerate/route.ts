@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import type { Activity, Child, Toy, SkillArea } from "@/types";
+import type { Activity, Child, ChildProfile, Toy, SkillArea } from "@/types";
 
 const anthropic = new Anthropic();
 
 interface RegenerateRequest {
   child: Child;
+  childProfile: ChildProfile | null;
   toys: Toy[];
   currentActivity: Activity;
-  feedback: string;
+  reason: string;
+  notes: string;
 }
 
 function getAgeDescription(ageInMonths: number): string {
@@ -22,32 +24,60 @@ function getAgeDescription(ageInMonths: number): string {
 export async function POST(request: NextRequest) {
   try {
     const body: RegenerateRequest = await request.json();
-    const { child, toys, currentActivity, feedback } = body;
+    const { child, childProfile, toys, currentActivity, reason, notes } = body;
 
     const toyList = toys.map((t) => `- ${t.name} (${t.category})`).join("\n");
     const ageDescription = getAgeDescription(child.age);
+
+    // Build child profile context
+    let profileContext = "";
+    if (childProfile) {
+      const parts: string[] = [];
+
+      if (childProfile.strengths.length > 0) {
+        parts.push(`Strengths: ${childProfile.strengths.join(", ")}`);
+      }
+      if (childProfile.preferredActivityTypes.length > 0) {
+        parts.push(`Prefers: ${childProfile.preferredActivityTypes.join(", ")}`);
+      }
+      if (childProfile.avoidances.length > 0) {
+        parts.push(`Avoid: ${childProfile.avoidances.join(", ")}`);
+      }
+      if (childProfile.observations.length > 0) {
+        parts.push(`Recent observations: ${childProfile.observations.slice(0, 3).join("; ")}`);
+      }
+
+      if (parts.length > 0) {
+        profileContext = `\n\nWhat we know about ${child.name}:\n${parts.join("\n")}`;
+      }
+    }
 
     const systemPrompt = `You are an expert early childhood educator specializing in play-based learning for toddlers. You adapt activities based on feedback to better suit the child's needs and interests.
 
 Always respond with valid JSON only, no additional text.`;
 
     const userPrompt = `The current activity didn't work well for ${child.name} (${ageDescription}).
+${profileContext}
 
 Current activity that needs replacement:
 - Title: ${currentActivity.title}
 - Description: ${currentActivity.description}
 - Skill areas: ${currentActivity.skillAreas.join(", ")}
 
-Caregiver feedback: "${feedback}"
+Why the caregiver wants a different activity:
+- Reason: ${reason}
+${notes !== reason ? `- Additional notes: "${notes}"` : ""}
 
 Available toys and materials:
 ${toyList}
 
 Create a NEW activity that:
-1. Addresses the issues mentioned in the feedback
+1. Directly addresses why the previous activity didn't work (${reason})
 2. Targets similar skill areas: ${currentActivity.skillAreas.join(", ")}
 3. Uses available materials
-4. Is more likely to engage the child based on the feedback
+4. Takes into account what we know about the child's preferences and history
+
+IMPORTANT: The new activity should be SIGNIFICANTLY different from the original. If they said "not interested" - try a completely different approach. If "too hard" - simplify substantially. If "too easy" - add meaningful challenge.
 
 Respond with a JSON object in this exact format:
 {

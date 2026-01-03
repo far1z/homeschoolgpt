@@ -27,7 +27,7 @@ import {
   addLessonHistory,
   getLessonHistory,
 } from "@/lib/storage";
-import { generateSession, regenerateActivity, updateChildProfile } from "@/lib/api";
+import { generateSession, regenerateActivity, updateChildProfile, updateProfileWithActivitySkip } from "@/lib/api";
 
 import Onboarding from "@/components/Onboarding";
 import ToySelection from "@/components/ToySelection";
@@ -160,16 +160,18 @@ export default function Home() {
     }
   };
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = async (reason: string, notes: string) => {
     if (!currentActivity || !child || !sessionToys.length) return;
 
     setIsRegenerating(true);
     try {
       const newActivity = await regenerateActivity(
         child,
+        childProfile,
         sessionToys,
         currentActivity,
-        "The child wasn't interested in this activity"
+        reason,
+        notes
       );
 
       if (session) {
@@ -184,6 +186,25 @@ export default function Home() {
         saveSession(updatedSession);
         setCurrentActivity({ ...newActivity, id: currentActivity.id });
       }
+
+      // Update child profile with skip feedback in background
+      updateProfileWithActivitySkip(
+        child.id,
+        childProfile,
+        {
+          title: currentActivity.title,
+          skillAreas: currentActivity.skillAreas,
+        },
+        reason,
+        notes
+      )
+        .then((updatedProfile) => {
+          setChildProfileState(updatedProfile);
+          saveChildProfile(updatedProfile);
+        })
+        .catch((err) => {
+          console.error("Failed to update profile with skip feedback:", err);
+        });
     } catch (err) {
       console.error("Failed to regenerate activity:", err);
       setError("Failed to generate a new activity. Please try again.");

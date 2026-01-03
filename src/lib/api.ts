@@ -66,9 +66,11 @@ export async function generateSession(
 
 export async function regenerateActivity(
   child: Child,
+  childProfile: ChildProfile | null,
   toys: Toy[],
   currentActivity: Activity,
-  feedback: string
+  reason: string,
+  notes: string
 ): Promise<Activity> {
   const response = await fetch("/api/curriculum/regenerate", {
     method: "POST",
@@ -77,9 +79,11 @@ export async function regenerateActivity(
     },
     body: JSON.stringify({
       child,
+      childProfile,
       toys,
       currentActivity,
-      feedback,
+      reason,
+      notes,
     }),
   });
 
@@ -114,6 +118,35 @@ export async function updateChildProfile(
 
   if (!response.ok) {
     throw new Error("Failed to update child profile");
+  }
+
+  const data: UpdateProfileResponse = await response.json();
+  return data.profile;
+}
+
+export async function updateProfileWithActivitySkip(
+  childId: string,
+  currentProfile: ChildProfile | null,
+  activity: { title: string; skillAreas: SkillArea[] },
+  reason: string,
+  notes: string
+): Promise<ChildProfile> {
+  const response = await fetch("/api/profile/skip", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      childId,
+      currentProfile,
+      activity,
+      reason,
+      notes,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update child profile with skip feedback");
   }
 
   const data: UpdateProfileResponse = await response.json();
