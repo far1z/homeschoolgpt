@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "HomeschoolGPT",
   description: "Personalized play-based learning for your little one",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -28,9 +32,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-      </head>
       <body className="font-body antialiased">
         <main className="min-h-screen min-h-dvh safe-area-inset">
           {children}
