@@ -1,27 +1,25 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { PartyPopper, Star, RefreshCw, Settings } from "lucide-react";
-import type { DayCurriculum } from "@/types";
+import { PartyPopper, Star, PlayCircle } from "lucide-react";
+import type { LearningSession } from "@/types";
 import { SKILL_AREAS } from "@/types";
 
-interface DaySummaryProps {
-  curriculum: DayCurriculum;
+interface SessionSummaryProps {
+  session: LearningSession;
   childName: string;
-  onStartNewDay: () => void;
-  onManageToys: () => void;
+  onStartNewSession: () => void;
 }
 
-export default function DaySummary({
-  curriculum,
+export default function SessionSummary({
+  session,
   childName,
-  onStartNewDay,
-  onManageToys,
-}: DaySummaryProps) {
-  const completedActivities = curriculum.activities.filter(
+  onStartNewSession,
+}: SessionSummaryProps) {
+  const completedActivities = session.activities.filter(
     (a) => a.status === "completed"
   );
-  const skippedActivities = curriculum.activities.filter(
+  const skippedActivities = session.activities.filter(
     (a) => a.status === "skipped"
   );
 
@@ -49,7 +47,7 @@ export default function DaySummary({
         </motion.div>
 
         <h1 className="font-display text-3xl font-semibold text-navy-800 mb-2">
-          Great job today!
+          Great session!
         </h1>
         <p className="text-navy-500">
           {childName} completed {completedActivities.length} activit
@@ -61,7 +59,7 @@ export default function DaySummary({
       <div className="card mb-6">
         <h2 className="font-semibold text-navy-700 mb-4 flex items-center gap-2">
           <Star className="w-5 h-5 text-honey-500" />
-          Today&apos;s Summary
+          Session Summary
         </h2>
 
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -83,7 +81,7 @@ export default function DaySummary({
         {skillsCovered.size > 0 && (
           <div>
             <p className="text-sm font-medium text-navy-600 mb-2">
-              Skills practiced today:
+              Skills practiced:
             </p>
             <div className="flex flex-wrap gap-2">
               {Array.from(skillsCovered).map((skill) => {
@@ -106,7 +104,7 @@ export default function DaySummary({
       <div className="card mb-6">
         <h2 className="font-semibold text-navy-700 mb-4">Activities</h2>
         <div className="space-y-3">
-          {curriculum.activities.map((activity, i) => (
+          {session.activities.map((activity, i) => (
             <div
               key={activity.id}
               className="flex items-center gap-3 py-2"
@@ -146,24 +144,16 @@ export default function DaySummary({
       {/* Actions */}
       <div className="space-y-3">
         <button
-          onClick={onStartNewDay}
+          onClick={onStartNewSession}
           className="btn-primary w-full flex items-center justify-center gap-2 py-4"
         >
-          <RefreshCw className="w-5 h-5" />
-          Generate Tomorrow&apos;s Curriculum
-        </button>
-
-        <button
-          onClick={onManageToys}
-          className="btn-secondary w-full flex items-center justify-center gap-2"
-        >
-          <Settings className="w-5 h-5" />
-          Manage Toys & Materials
+          <PlayCircle className="w-5 h-5" />
+          Start New Session
         </button>
       </div>
 
       <p className="text-center text-sm text-navy-400 mt-6">
-        Come back tomorrow for new activities!
+        Select different toys for new activities!
       </p>
     </motion.div>
   );

@@ -8,7 +8,7 @@ import type {
   Child,
   ChildProfile,
   Toy,
-  DayCurriculum,
+  LearningSession,
   LessonHistory,
   ActivityFeedback,
   Activity,
@@ -21,8 +21,8 @@ const STORAGE_KEY = "homeschool-gpt-state";
 const defaultState: AppState = {
   child: null,
   childProfile: null,
-  toys: [],
-  currentCurriculum: null,
+  toyHistory: [],
+  currentSession: null,
   lessonHistory: [],
   onboardingCompleted: false,
 };
@@ -34,7 +34,26 @@ export function getAppState(): AppState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return defaultState;
-    return JSON.parse(stored) as AppState;
+
+    // Handle migration from old state format
+    const parsed = JSON.parse(stored);
+
+    // Migrate old 'toys' to 'toyHistory' if needed
+    if (parsed.toys && !parsed.toyHistory) {
+      parsed.toyHistory = parsed.toys;
+      delete parsed.toys;
+    }
+
+    // Migrate old 'currentCurriculum' to 'currentSession' if needed
+    if (parsed.currentCurriculum && !parsed.currentSession) {
+      parsed.currentSession = {
+        ...parsed.currentCurriculum,
+        selectedToyIds: parsed.toyHistory?.map((t: Toy) => t.id) || [],
+      };
+      delete parsed.currentCurriculum;
+    }
+
+    return { ...defaultState, ...parsed } as AppState;
   } catch {
     return defaultState;
   }
@@ -85,49 +104,61 @@ export function initializeChildProfile(childId: string): ChildProfile {
   return profile;
 }
 
-// Toys operations
-export function getToys(): Toy[] {
-  return getAppState().toys;
+// Toy History operations (all toys ever added)
+export function getToyHistory(): Toy[] {
+  return getAppState().toyHistory;
 }
 
-export function saveToys(toys: Toy[]): void {
+export function addToToyHistory(toy: Toy): void {
   const state = getAppState();
-  state.toys = toys;
-  saveAppState(state);
-}
-
-export function addToy(toy: Toy): void {
-  const state = getAppState();
-  state.toys.push(toy);
-  saveAppState(state);
-}
-
-export function removeToy(toyId: string): void {
-  const state = getAppState();
-  state.toys = state.toys.filter((t) => t.id !== toyId);
-  saveAppState(state);
-}
-
-// Curriculum operations
-export function getCurrentCurriculum(): DayCurriculum | null {
-  const state = getAppState();
-
-  // Check if curriculum is from today
-  if (state.currentCurriculum) {
-    const currDate = new Date(state.currentCurriculum.date).toDateString();
-    const today = new Date().toDateString();
-    if (currDate !== today) {
-      // Curriculum is stale, return null to trigger regeneration
-      return null;
-    }
+  // Only add if not already in history
+  if (!state.toyHistory.some((t) => t.id === toy.id)) {
+    state.toyHistory.push(toy);
+    saveAppState(state);
   }
-
-  return state.currentCurriculum;
 }
 
-export function saveCurriculum(curriculum: DayCurriculum): void {
+export function addMultipleToToyHistory(toys: Toy[]): void {
   const state = getAppState();
-  state.currentCurriculum = curriculum;
+  toys.forEach((toy) => {
+    if (!state.toyHistory.some((t) => t.id === toy.id)) {
+      state.toyHistory.push(toy);
+    }
+  });
+  saveAppState(state);
+}
+
+export function removeFromToyHistory(toyId: string): void {
+  const state = getAppState();
+  state.toyHistory = state.toyHistory.filter((t) => t.id !== toyId);
+  saveAppState(state);
+}
+
+// Get toys by IDs (for getting session toys from history)
+export function getToysByIds(toyIds: string[]): Toy[] {
+  const history = getToyHistory();
+  return history.filter((t) => toyIds.includes(t.id));
+}
+
+// Session operations
+export function getCurrentSession(): LearningSession | null {
+  return getAppState().currentSession;
+}
+
+export function hasActiveSession(): boolean {
+  const session = getCurrentSession();
+  return session !== null && session.status === "in-progress";
+}
+
+export function saveSession(session: LearningSession): void {
+  const state = getAppState();
+  state.currentSession = session;
+  saveAppState(state);
+}
+
+export function clearSession(): void {
+  const state = getAppState();
+  state.currentSession = null;
   saveAppState(state);
 }
 
@@ -136,9 +167,9 @@ export function updateActivityStatus(
   status: Activity["status"]
 ): void {
   const state = getAppState();
-  if (!state.currentCurriculum) return;
+  if (!state.currentSession) return;
 
-  const activity = state.currentCurriculum.activities.find(
+  const activity = state.currentSession.activities.find(
     (a) => a.id === activityId
   );
   if (activity) {
@@ -149,18 +180,18 @@ export function updateActivityStatus(
 
 export function advanceToNextActivity(): Activity | null {
   const state = getAppState();
-  if (!state.currentCurriculum) return null;
+  if (!state.currentSession) return null;
 
-  const nextIndex = state.currentCurriculum.currentActivityIndex + 1;
-  if (nextIndex >= state.currentCurriculum.activities.length) {
-    state.currentCurriculum.status = "completed";
+  const nextIndex = state.currentSession.currentActivityIndex + 1;
+  if (nextIndex >= state.currentSession.activities.length) {
+    state.currentSession.status = "completed";
     saveAppState(state);
     return null;
   }
 
-  state.currentCurriculum.currentActivityIndex = nextIndex;
+  state.currentSession.currentActivityIndex = nextIndex;
   saveAppState(state);
-  return state.currentCurriculum.activities[nextIndex];
+  return state.currentSession.activities[nextIndex];
 }
 
 // History operations

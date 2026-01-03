@@ -7,7 +7,7 @@ import type {
   Child,
   ChildProfile,
   Toy,
-  DayCurriculum,
+  LearningSession,
   Activity,
   ActivityFeedback,
 } from "@/types";
@@ -15,44 +15,46 @@ import {
   getAppState,
   getChild,
   getChildProfile,
-  getToys,
-  getCurrentCurriculum,
-  saveCurriculum,
+  getToyHistory,
+  getToysByIds,
+  getCurrentSession,
+  saveSession,
   saveChildProfile,
-  initializeChildProfile,
+  addToToyHistory,
+  clearSession,
   updateActivityStatus,
   advanceToNextActivity,
   addLessonHistory,
   getLessonHistory,
 } from "@/lib/storage";
-import { generateCurriculum, regenerateActivity, updateChildProfile } from "@/lib/api";
+import { generateSession, regenerateActivity, updateChildProfile } from "@/lib/api";
 
 import Onboarding from "@/components/Onboarding";
+import ToySelection from "@/components/ToySelection";
 import LoadingScreen from "@/components/LoadingScreen";
 import Header from "@/components/Header";
 import ActivityCard from "@/components/ActivityCard";
 import FeedbackForm from "@/components/FeedbackForm";
-import DaySummary from "@/components/DaySummary";
-import ManageToys from "@/components/ManageToys";
+import SessionSummary from "@/components/SessionSummary";
 
 type AppView =
   | "loading"
   | "onboarding"
+  | "toy-selection"
   | "generating"
   | "activity"
   | "feedback"
-  | "summary"
-  | "manage-toys";
+  | "summary";
 
 export default function Home() {
   const [view, setView] = useState<AppView>("loading");
   const [child, setChild] = useState<Child | null>(null);
   const [childProfile, setChildProfileState] = useState<ChildProfile | null>(null);
-  const [toys, setToys] = useState<Toy[]>([]);
-  const [curriculum, setCurriculum] = useState<DayCurriculum | null>(null);
+  const [toyHistory, setToyHistory] = useState<Toy[]>([]);
+  const [sessionToys, setSessionToys] = useState<Toy[]>([]);
+  const [session, setSession] = useState<LearningSession | null>(null);
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize app state from localStorage
@@ -66,72 +68,71 @@ export default function Home() {
 
     setChild(state.child);
     setChildProfileState(state.childProfile);
-    setToys(state.toys);
+    setToyHistory(state.toyHistory);
 
-    const existingCurriculum = getCurrentCurriculum();
+    const existingSession = getCurrentSession();
 
-    if (existingCurriculum) {
-      setCurriculum(existingCurriculum);
-
-      if (existingCurriculum.status === "completed") {
-        setView("summary");
-      } else {
-        const activity =
-          existingCurriculum.activities[
-            existingCurriculum.currentActivityIndex
-          ];
-        setCurrentActivity(activity);
-        setView("activity");
-      }
+    if (existingSession && existingSession.status === "in-progress") {
+      // Resume existing session
+      setSession(existingSession);
+      setSessionToys(getToysByIds(existingSession.selectedToyIds));
+      const activity = existingSession.activities[existingSession.currentActivityIndex];
+      setCurrentActivity(activity);
+      setView("activity");
+    } else if (existingSession && existingSession.status === "completed") {
+      // Show summary of completed session
+      setSession(existingSession);
+      setSessionToys(getToysByIds(existingSession.selectedToyIds));
+      setView("summary");
     } else {
-      // Need to generate new curriculum
-      setView("generating");
-      generateNewCurriculum(state.child, state.childProfile, state.toys);
+      // Start fresh - select toys
+      setView("toy-selection");
     }
   }, []);
 
-  const generateNewCurriculum = async (
-    childData: Child,
-    profile: ChildProfile | null,
-    toysData: Toy[]
-  ) => {
-    try {
-      setError(null);
-      const recentHistory = getLessonHistory(10);
-      const newCurriculum = await generateCurriculum(
-        childData,
-        profile,
-        toysData,
-        recentHistory
-      );
+  const handleOnboardingComplete = () => {
+    const childData = getChild();
+    const profile = getChildProfile();
 
-      setCurriculum(newCurriculum);
-      saveCurriculum(newCurriculum);
-
-      if (newCurriculum.activities.length > 0) {
-        setCurrentActivity(newCurriculum.activities[0]);
-        setView("activity");
-      }
-    } catch (err) {
-      console.error("Failed to generate curriculum:", err);
-      setError("Failed to generate curriculum. Please try again.");
-      setView("activity");
+    if (childData) {
+      setChild(childData);
+      setChildProfileState(profile);
+      setView("toy-selection");
     }
   };
 
-  const handleOnboardingComplete = () => {
-    const childData = getChild();
-    const toysData = getToys();
+  const handleAddToHistory = (toy: Toy) => {
+    addToToyHistory(toy);
+    setToyHistory((prev) => [...prev, toy]);
+  };
 
-    if (childData && toysData.length > 0) {
-      // Initialize the child profile
-      const profile = initializeChildProfile(childData.id);
+  const handleStartSession = async (selectedToys: Toy[]) => {
+    if (!child) return;
 
-      setChild(childData);
-      setChildProfileState(profile);
-      setToys(toysData);
-      setView("generating");
-      generateNewCurriculum(childData, profile, toysData);
+    setSessionToys(selectedToys);
+    setView("generating");
+
+    try {
+      setError(null);
+      const recentHistory = getLessonHistory(10);
+      const newSession = await generateSession(
+        child,
+        childProfile,
+        selectedToys,
+        recentHistory
+      );
+
+      setSession(newSession);
+      saveSession(newSession);
+
+      if (newSession.activities.length > 0) {
+        setCurrentActivity(newSession.activities[0]);
+        setView("activity");
+      }
+    } catch (err) {
+      console.error("Failed to generate session:", err);
+      setError("Failed to generate activities. Please try again.");
+      setView("toy-selection");
     }
   };
 
@@ -150,40 +151,37 @@ export default function Home() {
     const nextActivity = advanceToNextActivity();
     if (nextActivity) {
       setCurrentActivity(nextActivity);
-      // Refresh curriculum from storage
-      const updated = getCurrentCurriculum();
-      setCurriculum(updated);
+      const updated = getCurrentSession();
+      setSession(updated);
     } else {
-      // All activities done
-      const updated = getCurrentCurriculum();
-      setCurriculum(updated);
+      const updated = getCurrentSession();
+      setSession(updated);
       setView("summary");
     }
   };
 
   const handleRegenerate = async () => {
-    if (!currentActivity || !child || !toys.length) return;
+    if (!currentActivity || !child || !sessionToys.length) return;
 
     setIsRegenerating(true);
     try {
       const newActivity = await regenerateActivity(
         child,
-        toys,
+        sessionToys,
         currentActivity,
         "The child wasn't interested in this activity"
       );
 
-      // Update the activity in the curriculum
-      if (curriculum) {
-        const updatedActivities = curriculum.activities.map((a) =>
+      if (session) {
+        const updatedActivities = session.activities.map((a) =>
           a.id === currentActivity.id ? { ...newActivity, id: a.id } : a
         );
-        const updatedCurriculum = {
-          ...curriculum,
+        const updatedSession = {
+          ...session,
           activities: updatedActivities,
         };
-        setCurriculum(updatedCurriculum);
-        saveCurriculum(updatedCurriculum);
+        setSession(updatedSession);
+        saveSession(updatedSession);
         setCurrentActivity({ ...newActivity, id: currentActivity.id });
       }
     } catch (err) {
@@ -197,7 +195,7 @@ export default function Home() {
   const handleFeedbackSubmit = async (feedback: ActivityFeedback) => {
     if (!currentActivity || !child) return;
 
-    // Save feedback to history with activity details
+    // Save feedback to history
     addLessonHistory(
       currentActivity.id,
       currentActivity.title,
@@ -205,8 +203,7 @@ export default function Home() {
       feedback
     );
 
-    // Update child profile in background (don't block UI)
-    setIsUpdatingProfile(true);
+    // Update child profile in background
     updateChildProfile(
       child.id,
       childProfile,
@@ -223,47 +220,32 @@ export default function Home() {
       })
       .catch((err) => {
         console.error("Failed to update child profile:", err);
-        // Non-critical, don't show error to user
-      })
-      .finally(() => {
-        setIsUpdatingProfile(false);
       });
 
     // Move to next activity
     const nextActivity = advanceToNextActivity();
     if (nextActivity) {
       setCurrentActivity(nextActivity);
-      // Refresh curriculum from storage
-      const updated = getCurrentCurriculum();
-      setCurriculum(updated);
+      const updated = getCurrentSession();
+      setSession(updated);
       setView("activity");
     } else {
-      // All activities done
-      const updated = getCurrentCurriculum();
-      setCurriculum(updated);
+      const updated = getCurrentSession();
+      setSession(updated);
       setView("summary");
     }
   };
 
-  const handleStartNewDay = useCallback(() => {
-    if (child && toys.length > 0) {
-      setView("generating");
-      // Get fresh profile from state
-      const profile = getChildProfile();
-      setChildProfileState(profile);
-      generateNewCurriculum(child, profile, toys);
-    }
-  }, [child, toys]);
-
-  const handleManageToysClick = () => {
-    setView("manage-toys");
-  };
-
-  const handleManageToysClose = () => {
-    // Refresh toys from storage
-    setToys(getToys());
-    setView(curriculum?.status === "completed" ? "summary" : "activity");
-  };
+  const handleStartNewSession = useCallback(() => {
+    clearSession();
+    setSession(null);
+    setCurrentActivity(null);
+    setSessionToys([]);
+    // Refresh toy history
+    setToyHistory(getToyHistory());
+    setChildProfileState(getChildProfile());
+    setView("toy-selection");
+  }, []);
 
   // Render based on current view
   if (view === "loading") {
@@ -274,23 +256,30 @@ export default function Home() {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
+  if (view === "toy-selection" && child) {
+    return (
+      <ToySelection
+        childName={child.name}
+        toyHistory={toyHistory}
+        onStartSession={handleStartSession}
+        onAddToHistory={handleAddToHistory}
+      />
+    );
+  }
+
   if (view === "generating") {
     return (
       <LoadingScreen
-        message="Creating today's curriculum..."
+        message="Creating activities..."
         childName={child?.name}
       />
     );
   }
 
-  if (view === "manage-toys") {
-    return <ManageToys initialToys={toys} onClose={handleManageToysClose} />;
-  }
-
   return (
     <div className="min-h-screen min-h-dvh flex flex-col">
-      {child && (
-        <Header childName={child.name} onSettingsClick={handleManageToysClick} />
+      {child && view !== "summary" && (
+        <Header childName={child.name} />
       )}
 
       <div className="flex-1 px-6 pb-8">
@@ -307,12 +296,12 @@ export default function Home() {
         )}
 
         <AnimatePresence mode="wait">
-          {view === "activity" && currentActivity && curriculum && (
+          {view === "activity" && currentActivity && session && (
             <ActivityCard
               key={`activity-${currentActivity.id}`}
               activity={currentActivity}
-              activityNumber={curriculum.currentActivityIndex + 1}
-              totalActivities={curriculum.activities.length}
+              activityNumber={session.currentActivityIndex + 1}
+              totalActivities={session.activities.length}
               onComplete={handleActivityComplete}
               onSkip={handleActivitySkip}
               onRegenerate={handleRegenerate}
@@ -326,20 +315,19 @@ export default function Home() {
               activity={currentActivity}
               onSubmit={handleFeedbackSubmit}
               isLastActivity={
-                curriculum
-                  ? curriculum.currentActivityIndex ===
-                    curriculum.activities.length - 1
+                session
+                  ? session.currentActivityIndex ===
+                    session.activities.length - 1
                   : false
               }
             />
           )}
 
-          {view === "summary" && curriculum && child && (
-            <DaySummary
-              curriculum={curriculum}
+          {view === "summary" && session && child && (
+            <SessionSummary
+              session={session}
               childName={child.name}
-              onStartNewDay={handleStartNewDay}
-              onManageToys={handleManageToysClick}
+              onStartNewSession={handleStartNewSession}
             />
           )}
         </AnimatePresence>

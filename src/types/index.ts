@@ -86,10 +86,12 @@ export interface ActivityFeedback {
 export type EngagementLevel = 1 | 2 | 3 | 4 | 5;
 export type CompletionLevel = "not-started" | "partial" | "completed" | "exceeded";
 
-export interface DayCurriculum {
+// A learning session - created each time they select toys and start
+export interface LearningSession {
   id: string;
   date: string;
   childId: string;
+  selectedToyIds: string[]; // toys chosen for this session
   activities: Activity[];
   currentActivityIndex: number;
   status: "in-progress" | "completed";
@@ -145,8 +147,8 @@ export interface ChildProfile {
 export interface AppState {
   child: Child | null;
   childProfile: ChildProfile | null;
-  toys: Toy[];
-  currentCurriculum: DayCurriculum | null;
+  toyHistory: Toy[]; // all toys ever added - for quick re-selection
+  currentSession: LearningSession | null;
   lessonHistory: LessonHistory[];
   onboardingCompleted: boolean;
 }

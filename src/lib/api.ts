@@ -8,7 +8,7 @@ import type {
   Child,
   ChildProfile,
   Toy,
-  DayCurriculum,
+  LearningSession,
   Activity,
   LessonHistory,
   ActivityFeedback,
@@ -18,12 +18,12 @@ import type {
 } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
-export async function generateCurriculum(
+export async function generateSession(
   child: Child,
   childProfile: ChildProfile | null,
-  toys: Toy[],
+  selectedToys: Toy[],
   recentHistory: LessonHistory[]
-): Promise<DayCurriculum> {
+): Promise<LearningSession> {
   const response = await fetch("/api/curriculum", {
     method: "POST",
     headers: {
@@ -32,23 +32,24 @@ export async function generateCurriculum(
     body: JSON.stringify({
       child,
       childProfile,
-      toys,
+      toys: selectedToys,
       recentHistory,
       date: new Date().toISOString(),
     }),
   });
 
   if (!response.ok) {
-    throw new Error("Failed to generate curriculum");
+    throw new Error("Failed to generate session");
   }
 
   const data: GenerateCurriculumResponse = await response.json();
 
-  // Create the curriculum object
-  const curriculum: DayCurriculum = {
+  // Create the session object
+  const session: LearningSession = {
     id: uuidv4(),
     date: new Date().toISOString(),
     childId: child.id,
+    selectedToyIds: selectedToys.map((t) => t.id),
     activities: data.activities.map((activity, index) => ({
       ...activity,
       id: activity.id || uuidv4(),
@@ -60,7 +61,7 @@ export async function generateCurriculum(
     generatedAt: new Date().toISOString(),
   };
 
-  return curriculum;
+  return session;
 }
 
 export async function regenerateActivity(
