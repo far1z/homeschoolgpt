@@ -1,11 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Settings, Sun, CloudSun, Moon } from "lucide-react";
+import { Sun, CloudSun, Moon } from "lucide-react";
+import SettingsDropdown from "./SettingsDropdown";
 
 interface HeaderProps {
   childName: string;
-  onSettingsClick?: () => void;
+  onProfileClick?: () => void;
+  onShareClick?: () => void;
 }
 
 function getGreeting(): { text: string; icon: React.ReactNode } {
@@ -31,7 +33,7 @@ function formatDate(): string {
   });
 }
 
-export default function Header({ childName, onSettingsClick }: HeaderProps) {
+export default function Header({ childName, onProfileClick, onShareClick }: HeaderProps) {
   const greeting = getGreeting();
 
   return (
@@ -51,13 +53,11 @@ export default function Header({ childName, onSettingsClick }: HeaderProps) {
         <p className="text-sm text-navy-400">{formatDate()}</p>
       </div>
 
-      {onSettingsClick && (
-        <button
-          onClick={onSettingsClick}
-          className="w-10 h-10 rounded-full bg-cream-200 hover:bg-cream-300 flex items-center justify-center transition-colors"
-        >
-          <Settings className="w-5 h-5 text-navy-600" />
-        </button>
+      {onProfileClick && onShareClick && (
+        <SettingsDropdown
+          onProfileClick={onProfileClick}
+          onShareClick={onShareClick}
+        />
       )}
     </motion.header>
   );

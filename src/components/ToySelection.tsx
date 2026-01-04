@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Sparkles, Camera, Check, Settings } from "lucide-react";
+import { Plus, X, Sparkles, Camera, Check } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import type { Toy, ToyCategory } from "@/types";
 import { TOY_CATEGORIES } from "@/types";
 import CameraCapture from "./CameraCapture";
+import SettingsDropdown from "./SettingsDropdown";
 
 interface ToySelectionProps {
   childName: string;
   toyHistory: Toy[];
   onStartSession: (selectedToys: Toy[]) => void;
   onAddToHistory: (toy: Toy) => void;
-  onSettingsClick?: () => void;
+  onProfileClick?: () => void;
+  onShareClick?: () => void;
 }
 
 export default function ToySelection({
@@ -21,7 +23,8 @@ export default function ToySelection({
   toyHistory,
   onStartSession,
   onAddToHistory,
-  onSettingsClick,
+  onProfileClick,
+  onShareClick,
 }: ToySelectionProps) {
   const [selectedToyIds, setSelectedToyIds] = useState<Set<string>>(new Set());
   const [showAddToy, setShowAddToy] = useState(false);
@@ -88,13 +91,11 @@ export default function ToySelection({
               What does {childName} have to play with today?
             </p>
           </div>
-          {onSettingsClick && (
-            <button
-              onClick={onSettingsClick}
-              className="w-10 h-10 rounded-full bg-cream-200 hover:bg-cream-300 flex items-center justify-center transition-colors flex-shrink-0"
-            >
-              <Settings className="w-5 h-5 text-navy-600" />
-            </button>
+          {onProfileClick && onShareClick && (
+            <SettingsDropdown
+              onProfileClick={onProfileClick}
+              onShareClick={onShareClick}
+            />
           )}
         </div>
       </motion.div>

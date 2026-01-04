@@ -271,12 +271,33 @@ export default function Home() {
     setView("toy-selection");
   }, []);
 
-  const handleSettingsClick = useCallback(() => {
+  const handleProfileClick = useCallback(() => {
     setPreviousView(view);
     // Refresh profile data before viewing
     setChildProfileState(getChildProfile());
     setView("settings");
   }, [view]);
+
+  const handleShareClick = useCallback(async () => {
+    const shareData = {
+      title: "HomeschoolGPT",
+      text: "Check out HomeschoolGPT - AI-powered personalized learning activities for toddlers!",
+      url: window.location.origin,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareData.url);
+        alert("Link copied to clipboard!");
+      }
+    } catch (err) {
+      // User cancelled or error
+      console.log("Share cancelled or failed:", err);
+    }
+  }, []);
 
   const handleSettingsBack = useCallback(() => {
     if (previousView) {
@@ -332,7 +353,8 @@ export default function Home() {
         toyHistory={toyHistory}
         onStartSession={handleStartSession}
         onAddToHistory={handleAddToHistory}
-        onSettingsClick={handleSettingsClick}
+        onProfileClick={handleProfileClick}
+        onShareClick={handleShareClick}
       />
     );
   }
@@ -359,7 +381,7 @@ export default function Home() {
   return (
     <div className="min-h-screen min-h-dvh flex flex-col">
       {child && view !== "summary" && (
-        <Header childName={child.name} onSettingsClick={handleSettingsClick} />
+        <Header childName={child.name} onProfileClick={handleProfileClick} onShareClick={handleShareClick} />
       )}
 
       <div className="flex-1 px-6 pb-8">
