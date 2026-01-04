@@ -371,10 +371,10 @@ export default function LandingPage() {
                   Get Started Free
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                <button className="inline-flex items-center justify-center gap-2 bg-white hover:bg-cream-50 text-navy-700 px-8 py-4 rounded-2xl font-semibold text-lg transition-all border border-cream-300 hover:border-cream-400">
+                <Link href="/app" className="inline-flex items-center justify-center gap-2 bg-white hover:bg-cream-50 text-navy-700 px-8 py-4 rounded-2xl font-semibold text-lg transition-all border border-cream-300 hover:border-cream-400">
                   <Play className="w-5 h-5" />
                   Watch Demo
-                </button>
+                </Link>
               </motion.div>
 
               <motion.p
