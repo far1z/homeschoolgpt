@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { MessageCircle, ArrowRight, Sparkles } from "lucide-react";
+import posthog from "posthog-js";
 import type { Activity, ActivityFeedback, EngagementLevel, CompletionLevel } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -53,6 +54,17 @@ export default function FeedbackForm({
       challenges: challenges.trim() || undefined,
       highlights: highlights.trim() || undefined,
     };
+
+    // Track feedback submission - key engagement metric
+    posthog.capture('feedback_submitted', {
+      activity_title: activity.title,
+      skill_areas: activity.skillAreas,
+      engagement_level: engagement,
+      completion_level: completion,
+      has_challenges: !!challenges.trim(),
+      has_highlights: !!highlights.trim(),
+      is_last_activity: isLastActivity,
+    });
 
     onSubmit(feedback);
   };

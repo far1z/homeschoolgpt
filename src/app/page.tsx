@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import posthog from "posthog-js";
 import {
   Sparkles,
   Package,
@@ -366,12 +367,17 @@ export default function LandingPage() {
               >
                 <Link
                   href="/app"
+                  onClick={() => posthog.capture('cta_clicked', { cta_location: 'hero', cta_text: 'Get Started Free' })}
                   className="inline-flex items-center justify-center gap-2 bg-terracotta-500 hover:bg-terracotta-600 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-lg shadow-terracotta-500/25 hover:shadow-xl hover:shadow-terracotta-500/30 hover:-translate-y-0.5"
                 >
                   Get Started Free
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                <Link href="/app" className="inline-flex items-center justify-center gap-2 bg-white hover:bg-cream-50 text-navy-700 px-8 py-4 rounded-2xl font-semibold text-lg transition-all border border-cream-300 hover:border-cream-400">
+                <Link
+                  href="/app"
+                  onClick={() => posthog.capture('cta_clicked', { cta_location: 'hero', cta_text: 'Watch Demo' })}
+                  className="inline-flex items-center justify-center gap-2 bg-white hover:bg-cream-50 text-navy-700 px-8 py-4 rounded-2xl font-semibold text-lg transition-all border border-cream-300 hover:border-cream-400"
+                >
                   <Play className="w-5 h-5" />
                   Watch Demo
                 </Link>
@@ -644,6 +650,7 @@ export default function LandingPage() {
             </p>
             <Link
               href="/app"
+              onClick={() => posthog.capture('cta_clicked', { cta_location: 'footer', cta_text: 'Get Started — It\'s Free' })}
               className="inline-flex items-center justify-center gap-2 bg-terracotta-500 hover:bg-terracotta-600 text-white px-10 py-5 rounded-2xl font-semibold text-xl transition-all shadow-lg shadow-terracotta-500/25 hover:shadow-xl hover:shadow-terracotta-500/30 hover:-translate-y-1"
             >
               Get Started — It&apos;s Free

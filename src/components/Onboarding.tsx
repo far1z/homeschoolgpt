@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
+import posthog from "posthog-js";
 import type { Child } from "@/types";
 import { saveChild, completeOnboarding, initializeChildProfile } from "@/lib/storage";
 
@@ -30,6 +31,20 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     saveChild(child);
     initializeChildProfile(child.id);
     completeOnboarding();
+
+    // Identify user in PostHog using child ID as distinct ID
+    posthog.identify(child.id, {
+      child_name: child.name,
+      child_age_months: child.age,
+      created_at: child.createdAt,
+    });
+
+    // Track onboarding completion - key conversion event
+    posthog.capture('onboarding_completed', {
+      child_age_months: child.age,
+      child_age_years: childAgeYears,
+    });
+
     onComplete();
   };
 
@@ -65,7 +80,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </p>
 
             <button
-              onClick={() => setStep("child")}
+              onClick={() => {
+                posthog.capture('onboarding_started');
+                setStep("child");
+              }}
               className="btn-primary flex items-center gap-2 text-lg px-8"
             >
               Get Started

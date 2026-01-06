@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, Sparkles, Camera, Check } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
+import posthog from "posthog-js";
 import type { Toy, ToyCategory } from "@/types";
 import { TOY_CATEGORIES } from "@/types";
 import CameraCapture from "./CameraCapture";
@@ -55,6 +56,14 @@ export default function ToySelection({
 
     onAddToHistory(toy);
     setSelectedToyIds((prev) => new Set([...prev, toy.id]));
+
+    // Track toy added via manual entry
+    posthog.capture('toy_added', {
+      toy_name: toy.name,
+      toy_category: toy.category,
+      add_method: 'manual_entry',
+    });
+
     setNewToyName("");
     setNewToyCategory("other");
     setShowAddToy(false);
@@ -63,11 +72,26 @@ export default function ToySelection({
   const handleToyFromCamera = (toy: Toy) => {
     onAddToHistory(toy);
     setSelectedToyIds((prev) => new Set([...prev, toy.id]));
+
+    // Track toy added via camera
+    posthog.capture('toy_added', {
+      toy_name: toy.name,
+      toy_category: toy.category,
+      add_method: 'camera',
+    });
+
     setShowCamera(false);
   };
 
   const handleStartSession = () => {
     const selectedToys = toyHistory.filter((t) => selectedToyIds.has(t.id));
+
+    // Track session started - key conversion event
+    posthog.capture('session_started', {
+      toys_selected_count: selectedToys.length,
+      toy_categories: [...new Set(selectedToys.map(t => t.category))],
+    });
+
     onStartSession(selectedToys);
   };
 
@@ -255,6 +279,13 @@ export default function ToySelection({
                       };
                       onAddToHistory(toy);
                       setSelectedToyIds((prev) => new Set([...prev, toy.id]));
+
+                      // Track toy added via quick add
+                      posthog.capture('toy_added', {
+                        toy_name: toy.name,
+                        toy_category: toy.category,
+                        add_method: 'quick_add',
+                      });
                     }}
                     className="px-3 py-1.5 bg-cream-200 hover:bg-cream-300 rounded-full text-sm text-navy-700 transition-colors"
                   >

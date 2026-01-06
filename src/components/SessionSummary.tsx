@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { PartyPopper, Star, PlayCircle } from "lucide-react";
+import posthog from "posthog-js";
 import type { LearningSession } from "@/types";
 import { SKILL_AREAS } from "@/types";
 
@@ -16,6 +18,9 @@ export default function SessionSummary({
   childName,
   onStartNewSession,
 }: SessionSummaryProps) {
+  // Track session completion only once per render
+  const hasTrackedCompletion = useRef(false);
+
   const completedActivities = session.activities.filter(
     (a) => a.status === "completed"
   );
@@ -28,6 +33,28 @@ export default function SessionSummary({
   completedActivities.forEach((a) => {
     a.skillAreas.forEach((skill) => skillsCovered.add(skill));
   });
+
+  // Track session completion - key conversion event (only once)
+  if (!hasTrackedCompletion.current && session.status === "completed") {
+    hasTrackedCompletion.current = true;
+    posthog.capture('session_completed', {
+      total_activities: session.activities.length,
+      completed_activities: completedActivities.length,
+      skipped_activities: skippedActivities.length,
+      skills_practiced: Array.from(skillsCovered),
+      completion_rate: completedActivities.length / session.activities.length,
+    });
+  }
+
+  const handleStartNewSession = () => {
+    // Track new session started from summary - retention signal
+    posthog.capture('new_session_started', {
+      previous_session_completed_activities: completedActivities.length,
+      previous_session_skipped_activities: skippedActivities.length,
+    });
+
+    onStartNewSession();
+  };
 
   return (
     <motion.div
@@ -144,7 +171,7 @@ export default function SessionSummary({
       {/* Actions */}
       <div className="space-y-3">
         <button
-          onClick={onStartNewSession}
+          onClick={handleStartNewSession}
           className="btn-primary w-full flex items-center justify-center gap-2 py-4"
         >
           <PlayCircle className="w-5 h-5" />

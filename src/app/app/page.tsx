@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
+import posthog from "posthog-js";
 
 import type {
   Child,
@@ -75,6 +76,14 @@ export default function Home() {
     setChildProfileState(state.childProfile);
     setToyHistory(state.toyHistory);
 
+    // Identify returning user in PostHog
+    if (state.child) {
+      posthog.identify(state.child.id, {
+        child_name: state.child.name,
+        child_age_months: state.child.age,
+      });
+    }
+
     const existingSession = getCurrentSession();
 
     if (existingSession && existingSession.status === "in-progress") {
@@ -128,6 +137,13 @@ export default function Home() {
       setSession(newSession);
       saveSession(newSession);
 
+      // Track curriculum generation success
+      posthog.capture('curriculum_generated', {
+        activities_count: newSession.activities.length,
+        toys_used: selectedToys.length,
+        skill_areas: [...new Set(newSession.activities.flatMap(a => a.skillAreas))],
+      });
+
       if (newSession.activities.length > 0) {
         setCurrentActivity(newSession.activities[0]);
         setView("activity");
@@ -136,6 +152,9 @@ export default function Home() {
       console.error("Failed to generate session:", err);
       setError("Failed to generate activities. Please try again.");
       setView("toy-selection");
+
+      // Track curriculum generation error
+      posthog.captureException(err);
     }
   };
 
@@ -288,10 +307,18 @@ export default function Home() {
     try {
       if (navigator.share && navigator.canShare(shareData)) {
         await navigator.share(shareData);
+        // Track successful share - viral growth metric
+        posthog.capture('app_shared', {
+          share_method: 'native_share',
+        });
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(shareData.url);
         alert("Link copied to clipboard!");
+        // Track clipboard share - viral growth metric
+        posthog.capture('app_shared', {
+          share_method: 'clipboard_copy',
+        });
       }
     } catch (err) {
       // User cancelled or error

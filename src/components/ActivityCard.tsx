@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Package, CheckCircle2, SkipForward, RefreshCw } from "lucide-react";
+import posthog from "posthog-js";
 import type { Activity } from "@/types";
 import { SKILL_AREAS } from "@/types";
 import DifferentActivityModal from "./DifferentActivityModal";
@@ -30,7 +31,43 @@ export default function ActivityCard({
 
   const handleDifferentActivitySubmit = (reason: string, notes: string) => {
     setShowDifferentModal(false);
+
+    // Track activity regeneration request
+    posthog.capture('activity_regenerated', {
+      activity_title: activity.title,
+      activity_number: activityNumber,
+      total_activities: totalActivities,
+      skill_areas: activity.skillAreas,
+      reason: reason,
+      has_notes: !!notes,
+    });
+
     onRegenerate(reason, notes);
+  };
+
+  const handleComplete = () => {
+    // Track activity completion - key engagement metric
+    posthog.capture('activity_completed', {
+      activity_title: activity.title,
+      activity_number: activityNumber,
+      total_activities: totalActivities,
+      skill_areas: activity.skillAreas,
+      duration_minutes: activity.duration,
+    });
+
+    onComplete();
+  };
+
+  const handleSkip = () => {
+    // Track activity skip - potential churn indicator
+    posthog.capture('activity_skipped', {
+      activity_title: activity.title,
+      activity_number: activityNumber,
+      total_activities: totalActivities,
+      skill_areas: activity.skillAreas,
+    });
+
+    onSkip();
   };
   const skillLabels = activity.skillAreas.map((skill) => {
     const found = SKILL_AREAS.find((s) => s.value === skill);
@@ -130,7 +167,7 @@ export default function ActivityCard({
       {/* Actions */}
       <div className="space-y-3">
         <button
-          onClick={onComplete}
+          onClick={handleComplete}
           className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-lg"
         >
           <CheckCircle2 className="w-6 h-6" />
@@ -147,7 +184,7 @@ export default function ActivityCard({
             {isRegenerating ? "Finding new..." : "Different Activity"}
           </button>
           <button
-            onClick={onSkip}
+            onClick={handleSkip}
             className="btn-ghost flex items-center gap-2"
           >
             <SkipForward className="w-4 h-4" />

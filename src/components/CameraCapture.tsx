@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, X, RotateCcw, Check, Loader2, AlertCircle } from "lucide-react";
+import posthog from "posthog-js";
 import type { Toy, ToyCategory } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -27,6 +28,12 @@ export default function CameraCapture({ onToyDetected, onClose }: CameraCaptureP
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Track photo captured event
+    posthog.capture('toy_photo_captured', {
+      file_type: file.type,
+      file_size_bytes: file.size,
+    });
 
     // Convert to base64
     const reader = new FileReader();
@@ -74,14 +81,30 @@ export default function CameraCapture({ onToyDetected, onClose }: CameraCaptureP
       if (result.isRelevant && result.toy) {
         setDetectedToy(result.toy);
         setState("success");
+
+        // Track successful toy photo analysis
+        posthog.capture('toy_photo_analyzed', {
+          toy_name: result.toy.name,
+          toy_category: result.toy.category,
+          is_relevant: true,
+        });
       } else {
         setErrorMessage(result.reason || "This doesn't appear to be a toy or play item.");
         setState("error");
+
+        // Track failed toy photo analysis
+        posthog.capture('toy_photo_analyzed', {
+          is_relevant: false,
+          rejection_reason: result.reason || 'not_a_toy',
+        });
       }
     } catch (error) {
       console.error("Error analyzing image:", error);
       setErrorMessage("Failed to analyze the image. Please try again.");
       setState("error");
+
+      // Track error in photo analysis
+      posthog.captureException(error);
     }
   }, [capturedImage]);
 
